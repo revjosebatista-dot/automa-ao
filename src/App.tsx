@@ -8,6 +8,7 @@ import { CampaignCreator } from "./components/CampaignCreator";
 import { LiveQueueMonitor } from "./components/LiveQueueMonitor";
 import { GroupsManager } from "./components/GroupsManager";
 import { IntegrationsSettings } from "./components/IntegrationsSettings";
+import { InstallAppModal } from "./components/InstallAppModal";
 import { 
   BroadcastCampaign, 
   WhatsAppGroup, 
@@ -37,6 +38,7 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<"overview" | "campaigns" | "groups" | "queue" | "settings">("overview");
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isServerModalOpen, setIsServerModalOpen] = useState(false);
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -553,6 +555,7 @@ export default function App() {
         setCurrentTab={setCurrentTab}
         onOpenQrModal={() => setIsQrModalOpen(true)}
         onOpenServerModal={() => setIsServerModalOpen(true)}
+        onOpenInstallModal={() => setIsInstallModalOpen(true)}
         onSyncGroups={handleSyncGroups}
         isSyncing={isSyncing}
         activeCampaignsCount={campaigns.filter((c) => c.status === "running").length}
@@ -900,6 +903,12 @@ export default function App() {
       <ServerStatusModal
         isOpen={isServerModalOpen}
         onClose={() => setIsServerModalOpen(false)}
+      />
+
+      {/* Install / Download App Modal */}
+      <InstallAppModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
       />
     </div>
   );

@@ -12,7 +12,8 @@ import {
   Settings, 
   Database,
   ExternalLink,
-  Server
+  Server,
+  Download
 } from "lucide-react";
 import { WhatsAppInstance } from "../types";
 
@@ -22,6 +23,7 @@ interface HeaderProps {
   setCurrentTab: (tab: "overview" | "campaigns" | "groups" | "queue" | "settings") => void;
   onOpenQrModal: () => void;
   onOpenServerModal: () => void;
+  onOpenInstallModal: () => void;
   onSyncGroups: () => void;
   isSyncing: boolean;
   activeCampaignsCount: number;
@@ -33,6 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
   setCurrentTab,
   onOpenQrModal,
   onOpenServerModal,
+  onOpenInstallModal,
   onSyncGroups,
   isSyncing,
   activeCampaignsCount,
@@ -127,6 +130,17 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isSyncing ? "animate-spin text-emerald-600" : ""}`} />
               <span className="hidden md:inline">{isSyncing ? "Sincronizando..." : "Sincronizar"}</span>
+            </button>
+
+            {/* Install / Download App Button */}
+            <button
+              id="header-install-app-btn"
+              onClick={onOpenInstallModal}
+              className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-2.5 sm:px-3 py-2 rounded-xl transition-all shadow-xs"
+              title="Baixar ou instalar aplicativo no celular ou computador"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Baixar App</span>
             </button>
           </div>
         </div>
