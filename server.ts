@@ -343,7 +343,7 @@ app.post("/api/campaigns", (req, res) => {
 
   // Add initial log
   dispatchLogs.unshift({
-    id: `log-${Date.now()}`,
+    id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     campaignId: newCampaign.id,
     groupId: groupsState[0]?.id || "group@g.us",
     groupName: groupsState[0]?.name || "Grupo 01",
@@ -400,7 +400,7 @@ app.post("/api/dispatch/simulate-step", (_req, res) => {
 
       // Add log
       dispatchLogs.unshift({
-        id: `log-${Date.now()}`,
+        id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         campaignId: runningCampaign.id,
         groupId: targetGroup?.id || "group@g.us",
         groupName: targetGroup?.name || "Grupo VIP",

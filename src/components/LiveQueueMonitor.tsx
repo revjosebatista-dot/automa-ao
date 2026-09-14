@@ -272,8 +272,8 @@ export const LiveQueueMonitor: React.FC<LiveQueueMonitorProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono">
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50/70 transition-colors">
+              {filteredLogs.map((log, index) => (
+                <tr key={`${log.id}-${index}`} className="hover:bg-slate-50/70 transition-colors">
                   <td className="py-3 pl-2 text-slate-500">{log.timestamp}</td>
                   <td className="py-3 text-slate-900 font-sans font-medium">{log.groupName}</td>
                   <td className="py-3 text-slate-500 text-[11px]">{log.messageId}</td>

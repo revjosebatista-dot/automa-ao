@@ -264,8 +264,10 @@ export default function App() {
   // Background ticker for next dispatch
   useEffect(() => {
     const interval = setInterval(() => {
-      setCampaigns((prevCampaigns) =>
-        prevCampaigns.map((camp) => {
+      setCampaigns((prevCampaigns) => {
+        const newLogsToAdd: DispatchLog[] = [];
+
+        const updated = prevCampaigns.map((camp) => {
           if (camp.status === "running") {
             if (camp.nextDispatchIn > 1) {
               return { ...camp, nextDispatchIn: camp.nextDispatchIn - 1 };
@@ -273,13 +275,13 @@ export default function App() {
               // Trigger dispatch step
               if (camp.sentCount < camp.targetGroupsCount) {
                 const nextSentCount = camp.sentCount + 1;
-                const targetGroup = groups[nextSentCount % groups.length];
+                const targetGroup = groups[nextSentCount % (groups.length || 1)];
                 const randomDelay = Math.floor(
                   Math.random() * (camp.delayRange[1] - camp.delayRange[0] + 1)
                 ) + camp.delayRange[0];
 
-                const newLog: DispatchLog = {
-                  id: `log-${Date.now()}`,
+                newLogsToAdd.push({
+                  id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                   campaignId: camp.id,
                   groupId: targetGroup?.id || "group@g.us",
                   groupName: targetGroup?.name || "Grupo VIP",
@@ -287,8 +289,7 @@ export default function App() {
                   status: "delivered",
                   messageId: `3EB${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
                   delayUsed: randomDelay,
-                };
-                setLogs((prev) => [newLog, ...prev]);
+                });
 
                 return {
                   ...camp,
@@ -301,8 +302,20 @@ export default function App() {
             }
           }
           return camp;
-        })
-      );
+        });
+
+        if (newLogsToAdd.length > 0) {
+          setTimeout(() => {
+            setLogs((prev) => {
+              const existingIds = new Set(prev.map((l) => l.id));
+              const uniqueNew = newLogsToAdd.filter((l) => !existingIds.has(l.id));
+              return [...uniqueNew, ...prev];
+            });
+          }, 0);
+        }
+
+        return updated;
+      });
     }, 1000);
 
     return () => clearInterval(interval);
@@ -445,7 +458,7 @@ export default function App() {
           const nextSent = runningCamp.sentCount + 1;
           const targetGroup = groups[nextSent % groups.length];
           const newLog: DispatchLog = {
-            id: `log-${Date.now()}`,
+            id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             campaignId: runningCamp.id,
             groupId: targetGroup?.id || "group@g.us",
             groupName: targetGroup?.name || "Grupo Alvo",
@@ -454,7 +467,11 @@ export default function App() {
             messageId: `3EB${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
             delayUsed: runningCamp.delayRange[0],
           };
-          setLogs((prev) => [newLog, ...prev]);
+          setLogs((prev) => {
+            const existingIds = new Set(prev.map((l) => l.id));
+            if (existingIds.has(newLog.id)) return prev;
+            return [newLog, ...prev];
+          });
           setCampaigns((prev) =>
             prev.map((c) =>
               c.id === runningCamp.id
@@ -797,8 +814,8 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-mono">
-                    {logs.slice(0, 4).map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-50/50">
+                    {logs.slice(0, 4).map((log, index) => (
+                      <tr key={`${log.id}-${index}`} className="hover:bg-slate-50/50">
                         <td className="py-2.5 pl-2 text-slate-500">{log.timestamp}</td>
                         <td className="py-2.5 text-slate-900 font-sans font-medium">{log.groupName}</td>
                         <td className="py-2.5 text-slate-400 text-[11px]">{log.messageId}</td>

@@ -2,5 +2,7 @@
   "name": "AutoBroadcast WhatsApp",
   "description": "Plataforma de automação e disparo de vídeos em massa para grupos de WhatsApp com proteção anti-ban",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
