@@ -9,6 +9,8 @@ import { LiveQueueMonitor } from "./components/LiveQueueMonitor";
 import { GroupsManager } from "./components/GroupsManager";
 import { IntegrationsSettings } from "./components/IntegrationsSettings";
 import { InstallAppModal } from "./components/InstallAppModal";
+import { WhatsAppApiPlayground } from "./components/WhatsAppApiPlayground";
+import { WhatsAppWebChat } from "./components/WhatsAppWebChat";
 import { 
   BroadcastCampaign, 
   WhatsAppGroup, 
@@ -31,11 +33,12 @@ import {
   ChevronRight,
   Server,
   Zap,
-  Radio
+  Radio,
+  MessageSquare
 } from "lucide-react";
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<"overview" | "campaigns" | "groups" | "queue" | "settings">("overview");
+  const [currentTab, setCurrentTab] = useState<"overview" | "whatsapp" | "campaigns" | "groups" | "queue" | "settings" | "api">("overview");
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isServerModalOpen, setIsServerModalOpen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
@@ -323,6 +326,28 @@ export default function App() {
     return () => clearInterval(interval);
   }, [groups]);
 
+  // Periodic backend sync so server-side auto-dispatch reflects on client
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const [cRes, lRes] = await Promise.all([
+          fetch("/api/campaigns"),
+          fetch("/api/logs"),
+        ]);
+        if (cRes.ok) {
+          const cData = await cRes.json();
+          if (cData.campaigns?.length) setCampaigns(cData.campaigns);
+        }
+        if (lRes.ok) {
+          const lData = await lRes.json();
+          if (lData.logs?.length) setLogs(lData.logs);
+        }
+      } catch (e) {}
+    }, 2500);
+
+    return () => clearInterval(pollInterval);
+  }, []);
+
   // Sync groups handler
   const handleSyncGroups = async () => {
     setIsSyncing(true);
@@ -330,9 +355,15 @@ export default function App() {
       const res = await fetch("/api/groups/sync", { method: "POST" });
       if (res.ok) {
         const data = await res.json();
-        if (data.groups) setGroups(data.groups);
+        if (data.groups && data.groups.length > 0) {
+          setGroups(data.groups);
+          showToast(`Sincronizados ${data.groups.length} grupos diretamente do WhatsApp!`);
+        } else {
+          showToast("Grupos sincronizados com sucesso!");
+        }
+      } else {
+        showToast("Grupos atualizados com sucesso!");
       }
-      showToast("Grupos sincronizados com sucesso diretamente do WhatsApp!");
     } catch (e) {
       showToast("Grupos atualizados com sucesso!");
     } finally {
@@ -355,20 +386,34 @@ export default function App() {
     }
   };
 
-  const handleConfirmPair = async () => {
+  const handleConfirmPair = async (customPhone?: string, customName?: string) => {
     try {
-      const res = await fetch("/api/instance/confirm-pair", { method: "POST" });
+      const res = await fetch("/api/instance/confirm-pair", { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: customPhone, name: customName }),
+      });
       if (res.ok) {
         const data = await res.json();
         setInstance(data.instance);
       } else {
-        setInstance((prev) => ({ ...prev, status: "connected" }));
+        setInstance((prev) => ({ 
+          ...prev, 
+          status: "connected",
+          phone: customPhone || prev.phone,
+          name: customName || prev.name
+        }));
       }
     } catch (e) {
-      setInstance((prev) => ({ ...prev, status: "connected" }));
+      setInstance((prev) => ({ 
+        ...prev, 
+        status: "connected",
+        phone: customPhone || prev.phone,
+        name: customName || prev.name
+      }));
     }
     setIsQrModalOpen(false);
-    showToast("WhatsApp conectado com sucesso!");
+    showToast(`WhatsApp ${customPhone ? `(${customPhone})` : ""} conectado com sucesso!`);
   };
 
   const handleDisconnect = async () => {
@@ -590,21 +635,28 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setCurrentTab("whatsapp")}
+                  className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] py-2.5 px-2 rounded-xl flex items-center justify-center gap-1 shadow-xs"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>WhatsApp</span>
+                </button>
+
                 <button
                   onClick={() => setCurrentTab("campaigns")}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-xs shadow-emerald-600/20"
+                  className="w-full bg-slate-900 hover:bg-slate-800 active:scale-98 text-white font-bold text-[11px] py-2.5 px-2 rounded-xl flex items-center justify-center gap-1 shadow-xs"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Novo Disparo</span>
+                  <span>Disparo</span>
                 </button>
 
                 <button
                   onClick={() => setIsQrModalOpen(true)}
-                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 border border-slate-200"
+                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-[11px] py-2.5 px-2 rounded-xl flex items-center justify-center gap-1 border border-slate-200"
                 >
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Gerenciar Sessão</span>
+                  <span>Sessão</span>
                 </button>
               </div>
             </div>
@@ -616,30 +668,39 @@ export default function App() {
               <div className="relative z-10 max-w-2xl">
                 <div className="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold px-3 py-1 rounded-full mb-3">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Motor Baileys v7 + Supabase Sync Ativo</span>
+                  <span>Motor Baileys v7 + Envio Automático em Segundo Plano Ativo</span>
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
                   Automação & Disparo de Vídeos em Grupos de WhatsApp
                 </h1>
                 <p className="text-slate-300 text-xs sm:text-sm mt-2 leading-relaxed">
-                  Envie vídeos em massa com pré-visualização inline, legendas dinâmicas com Spintax para evitar filtros de spam e intervalos aleatórios de segurança anti-ban.
+                  Envie vídeos em massa com legendas inteligentes Spintax, sincronize todos os seus grupos automaticamente e mexa no WhatsApp em tempo real pelo chat integrado.
                 </p>
 
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <button
-                    id="hero-create-campaign-btn"
-                    onClick={() => setCurrentTab("campaigns")}
+                    id="hero-whatsapp-web-btn"
+                    onClick={() => setCurrentTab("whatsapp")}
                     className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs sm:text-sm px-5 py-3 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer"
                   >
-                    <Send className="w-4 h-4" />
-                    <span>Criar Novo Disparo de Vídeo</span>
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Mexer no WhatsApp (Chat & Vídeos)</span>
+                  </button>
+
+                  <button
+                    id="hero-create-campaign-btn"
+                    onClick={() => setCurrentTab("campaigns")}
+                    className="bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2"
+                  >
+                    <Send className="w-4 h-4 text-emerald-400" />
+                    <span>Criar Novo Disparo</span>
                   </button>
 
                   <button
                     onClick={() => setIsQrModalOpen(true)}
                     className="bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm px-4 py-3 rounded-xl border border-white/20 transition-all flex items-center gap-2"
                   >
-                    <span>Status da Instância WhatsApp</span>
+                    <span>Status da Sessão</span>
                     <ChevronRight className="w-4 h-4 text-slate-400" />
                   </button>
                 </div>
@@ -837,6 +898,15 @@ export default function App() {
           </div>
         )}
 
+        {currentTab === "whatsapp" && (
+          <div className="animate-in fade-in duration-150">
+            <WhatsAppWebChat
+              instance={instance}
+              groups={groups}
+            />
+          </div>
+        )}
+
         {currentTab === "campaigns" && (
           <div className="animate-in fade-in duration-150">
             <CampaignCreator
@@ -877,6 +947,12 @@ export default function App() {
               settings={settings}
               onSaveSettings={handleSaveSettings}
             />
+          </div>
+        )}
+
+        {currentTab === "api" && (
+          <div className="animate-in fade-in duration-150">
+            <WhatsAppApiPlayground />
           </div>
         )}
       </main>

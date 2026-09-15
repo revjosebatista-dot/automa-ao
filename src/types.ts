@@ -70,3 +70,28 @@ export interface SystemSettings {
   allowedHoursEnd: string;
   autoCompressVideos: boolean;
 }
+
+export interface ChatMessage {
+  id: string;
+  sender: "me" | "them";
+  senderName?: string;
+  text: string;
+  timestamp: string;
+  status: "sent" | "delivered" | "read";
+  mediaUrl?: string;
+  mediaType?: "video" | "image" | "audio" | "document";
+  mediaCaption?: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  name: string;
+  phone?: string;
+  isGroup: boolean;
+  avatar: string;
+  unreadCount: number;
+  lastMessage: string;
+  lastMessageTime: string;
+  isOnline?: boolean;
+  messages: ChatMessage[];
+}

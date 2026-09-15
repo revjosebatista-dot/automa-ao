@@ -13,14 +13,16 @@ import {
   Database,
   ExternalLink,
   Server,
-  Download
+  Download,
+  Code2,
+  MessageSquare
 } from "lucide-react";
 import { WhatsAppInstance } from "../types";
 
 interface HeaderProps {
   instance: WhatsAppInstance;
-  currentTab: "overview" | "campaigns" | "groups" | "queue" | "settings";
-  setCurrentTab: (tab: "overview" | "campaigns" | "groups" | "queue" | "settings") => void;
+  currentTab: "overview" | "whatsapp" | "campaigns" | "groups" | "queue" | "settings" | "api";
+  setCurrentTab: (tab: "overview" | "whatsapp" | "campaigns" | "groups" | "queue" | "settings" | "api") => void;
   onOpenQrModal: () => void;
   onOpenServerModal: () => void;
   onOpenInstallModal: () => void;
@@ -161,6 +163,22 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <button
+            id="nav-tab-whatsapp"
+            onClick={() => setCurrentTab("whatsapp")}
+            className={`flex items-center gap-2 px-3 py-2 text-xs lg:text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
+              currentTab === "whatsapp"
+                ? "bg-emerald-700 text-white shadow-xs"
+                : "text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/70"
+            }`}
+          >
+            <MessageSquare className="w-4 h-4 text-emerald-500" />
+            <span>Mexer no WhatsApp</span>
+            <span className="text-[9px] font-bold bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded-full">
+              LIVE
+            </span>
+          </button>
+
+          <button
             id="nav-tab-campaigns"
             onClick={() => setCurrentTab("campaigns")}
             className={`flex items-center gap-2 px-3 py-2 text-xs lg:text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
@@ -219,6 +237,22 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Database className="w-4 h-4" />
             <span>Supabase & Servidor</span>
+          </button>
+
+          <button
+            id="nav-tab-api"
+            onClick={() => setCurrentTab("api")}
+            className={`flex items-center gap-2 px-3 py-2 text-xs lg:text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
+              currentTab === "api"
+                ? "bg-slate-900 text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            <Code2 className="w-4 h-4 text-emerald-500" />
+            <span>API WhatsApp</span>
+            <span className="text-[9px] font-mono bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">
+              REST
+            </span>
           </button>
         </nav>
       </div>

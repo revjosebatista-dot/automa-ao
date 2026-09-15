@@ -9,7 +9,11 @@ import {
   ShieldCheck, 
   ExternalLink, 
   Filter,
-  Download
+  Download,
+  Upload,
+  Link,
+  Sparkles,
+  CheckCircle2
 } from "lucide-react";
 import { WhatsAppGroup } from "../types";
 
@@ -17,7 +21,7 @@ interface GroupsManagerProps {
   groups: WhatsAppGroup[];
   onSync: () => void;
   isSyncing: boolean;
-  onAddGroup: (group: { name: string; category: string; membersCount: number; isAdmin: boolean }) => void;
+  onAddGroup: (group: { name: string; category: string; membersCount: number; isAdmin: boolean; inviteLink?: string }) => void;
 }
 
 export const GroupsManager: React.FC<GroupsManagerProps> = ({
@@ -29,10 +33,20 @@ export const GroupsManager: React.FC<GroupsManagerProps> = ({
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  
+  // Single Add
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupCategory, setNewGroupCategory] = useState("Vendas");
   const [newGroupMembers, setNewGroupMembers] = useState(250);
   const [newGroupIsAdmin, setNewGroupIsAdmin] = useState(true);
+  const [newGroupInviteLink, setNewGroupInviteLink] = useState("");
+  
+  // Bulk Import
+  const [bulkText, setBulkText] = useState("");
+  const [bulkCategory, setBulkCategory] = useState("Lançamento");
+  const [bulkSuccessMsg, setBulkSuccessMsg] = useState<string | null>(null);
+
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const categories = ["Todos", ...Array.from(new Set(groups.map((g) => g.category)))];
@@ -57,9 +71,46 @@ export const GroupsManager: React.FC<GroupsManagerProps> = ({
       category: newGroupCategory,
       membersCount: Number(newGroupMembers),
       isAdmin: newGroupIsAdmin,
+      inviteLink: newGroupInviteLink.trim() || undefined,
     });
     setNewGroupName("");
+    setNewGroupInviteLink("");
     setShowAddModal(false);
+  };
+
+  const handleBulkImport = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bulkText.trim()) return;
+
+    const lines = bulkText.split("\n").map(l => l.trim()).filter(Boolean);
+    let count = 0;
+
+    lines.forEach(line => {
+      let name = line;
+      let inviteLink: string | undefined = undefined;
+
+      if (line.includes("chat.whatsapp.com/")) {
+        inviteLink = line;
+        const code = line.split("chat.whatsapp.com/")[1]?.slice(0, 10) || Math.random().toString(36).slice(2, 6);
+        name = `Grupo WhatsApp (${code.toUpperCase()})`;
+      }
+
+      onAddGroup({
+        name,
+        category: bulkCategory,
+        membersCount: Math.floor(Math.random() * 400) + 150,
+        isAdmin: true,
+        inviteLink,
+      });
+      count++;
+    });
+
+    setBulkSuccessMsg(`${count} grupos importados com sucesso!`);
+    setTimeout(() => {
+      setBulkSuccessMsg(null);
+      setBulkText("");
+      setShowBulkModal(false);
+    }, 1200);
   };
 
   return (
@@ -70,28 +121,37 @@ export const GroupsManager: React.FC<GroupsManagerProps> = ({
           <div>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <Users className="w-5 h-5 text-emerald-600" />
-              Gerenciador de Grupos do WhatsApp
+              Sincronização & Gestão de Grupos ({groups.length})
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Todos os grupos sincronizados da sua conta do WhatsApp para segmentação e disparos.
+              Grupos sincronizados da sua conta oficial para envio automático de vídeos em massa.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               id="sync-groups-button"
               onClick={onSync}
               disabled={isSyncing}
-              className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-300 transition-all shadow-2xs disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-300 transition-all shadow-2xs disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isSyncing ? "animate-spin text-emerald-600" : ""}`} />
-              <span>{isSyncing ? "Sincronizando..." : "Sincronizar com WhatsApp"}</span>
+              <span>{isSyncing ? "Sincronizando..." : "Sincronizar do WhatsApp"}</span>
+            </button>
+
+            <button
+              id="bulk-import-groups-btn"
+              onClick={() => setShowBulkModal(true)}
+              className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-200 transition-all cursor-pointer"
+            >
+              <Upload className="w-4 h-4 text-emerald-600" />
+              <span>Importar Links em Lote</span>
             </button>
 
             <button
               id="open-add-group-modal"
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs shadow-emerald-600/20"
+              className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs shadow-emerald-600/20 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Adicionar Grupo</span>
@@ -107,7 +167,7 @@ export const GroupsManager: React.FC<GroupsManagerProps> = ({
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   selectedCategory === cat
                     ? "bg-slate-900 text-white shadow-2xs"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -148,37 +208,40 @@ export const GroupsManager: React.FC<GroupsManagerProps> = ({
                   referrerPolicy="no-referrer"
                 />
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 line-clamp-1" title={group.name}>
+                  <h4 className="text-sm font-bold text-slate-900 line-clamp-1 leading-snug">
                     {group.name}
-                  </h3>
+                  </h4>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
-                      {group.category}
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      {group.membersCount} participantes
                     </span>
-                    <span className="text-xs text-slate-500 font-mono">
-                      {group.membersCount} membros
+                    <span className="w-1 h-1 rounded-full bg-slate-300" />
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                      {group.category}
                     </span>
                   </div>
                 </div>
               </div>
 
               <span
-                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${
                   group.isAdmin
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : "bg-slate-50 text-slate-600 border-slate-200"
+                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                    : "bg-slate-100 text-slate-600 border border-slate-200"
                 }`}
               >
                 {group.isAdmin ? "Admin" : "Membro"}
               </span>
             </div>
 
-            {/* JID / Group WhatsApp ID */}
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-between text-[11px] font-mono text-slate-500">
-              <span className="truncate max-w-[200px]">{group.id}</span>
+            {/* JID / Identifier */}
+            <div className="bg-slate-50 border border-slate-200/70 rounded-xl p-2.5 flex items-center justify-between text-xs">
+              <span className="font-mono text-[11px] text-slate-600 truncate max-w-[200px]" title={group.id}>
+                {group.id}
+              </span>
               <button
                 onClick={() => handleCopyId(group.id)}
-                className="p-1 hover:bg-slate-200 rounded text-slate-600 transition-colors ml-2"
+                className="text-slate-400 hover:text-slate-700 transition-colors p-1"
                 title="Copiar ID do Grupo"
               >
                 {copiedId === group.id ? (
@@ -189,21 +252,38 @@ export const GroupsManager: React.FC<GroupsManagerProps> = ({
               </button>
             </div>
 
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <span>Última atividade: {group.lastActivity}</span>
-              <span className="text-emerald-700 font-semibold">Pronto para envio</span>
+            {/* Actions & Status */}
+            <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
+              <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Pronto para Disparo
+              </span>
+
+              {group.inviteLink && (
+                <a
+                  href={group.inviteLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-700 hover:underline text-[11px] font-semibold flex items-center gap-1"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Abrir Link
+                </a>
+              )}
             </div>
           </div>
         ))}
       </div>
 
-      {/* Modal: Adicionar Novo Grupo */}
+      {/* MODAL: ADICIONAR UM GRUPO */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-            <h3 className="text-base font-bold text-slate-900 mb-1">Adicionar Grupo à Lista</h3>
+            <h3 className="text-base font-bold text-slate-900 mb-1 flex items-center gap-2">
+              <Plus className="w-4 h-4 text-emerald-600" />
+              Adicionar Grupo de WhatsApp
+            </h3>
             <p className="text-xs text-slate-500 mb-4">
-              Cadastre um novo grupo ou cole o link de convite do WhatsApp.
+              Cadastre um novo grupo para incluir nas suas listas de disparo automático.
             </p>
 
             <form onSubmit={handleCreateGroup} className="space-y-4">
@@ -214,42 +294,57 @@ export const GroupsManager: React.FC<GroupsManagerProps> = ({
                 <input
                   type="text"
                   required
+                  placeholder="Ex: 🎯 Mentoria VIP Vendas 2026"
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
-                  placeholder="Ex: Grupo VIP Ofertas 2026"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Categoria / Tag
-                </label>
-                <select
-                  value={newGroupCategory}
-                  onChange={(e) => setNewGroupCategory(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="Vendas">Vendas</option>
-                  <option value="Alunos">Alunos</option>
-                  <option value="Afiliados">Afiliados</option>
-                  <option value="Lançamento">Lançamento</option>
-                  <option value="Networking">Networking</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Quantidade Estimada de Membros
+                  Link de Convite (Opcional)
                 </label>
                 <input
-                  type="number"
-                  min={1}
-                  max={1024}
-                  value={newGroupMembers}
-                  onChange={(e) => setNewGroupMembers(Number(e.target.value))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                  type="url"
+                  placeholder="https://chat.whatsapp.com/..."
+                  value={newGroupInviteLink}
+                  onChange={(e) => setNewGroupInviteLink(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 font-mono text-xs rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Categoria
+                  </label>
+                  <select
+                    value={newGroupCategory}
+                    onChange={(e) => setNewGroupCategory(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="Vendas">Vendas</option>
+                    <option value="Lançamento">Lançamento</option>
+                    <option value="Afiliados">Afiliados</option>
+                    <option value="Networking">Networking</option>
+                    <option value="Suporte">Suporte</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Membros Estimados
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={1024}
+                    value={newGroupMembers}
+                    onChange={(e) => setNewGroupMembers(Number(e.target.value))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center gap-2 pt-1">
@@ -269,13 +364,13 @@ export const GroupsManager: React.FC<GroupsManagerProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs py-2.5 rounded-xl transition-colors"
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs py-2.5 rounded-xl transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-xs transition-colors"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-xs transition-colors cursor-pointer"
                 >
                   Salvar Grupo
                 </button>
@@ -284,6 +379,78 @@ export const GroupsManager: React.FC<GroupsManagerProps> = ({
           </div>
         </div>
       )}
+
+      {/* MODAL: IMPORTAR LINKS EM LOTE */}
+      {showBulkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+            <h3 className="text-base font-bold text-slate-900 mb-1 flex items-center gap-2">
+              <Upload className="w-4 h-4 text-emerald-600" />
+              Importar Grupos & Links em Lote
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Cole uma lista de links de convite do WhatsApp (um por linha) ou nomes de grupos. O sistema cadastrará todos automaticamente!
+            </p>
+
+            <form onSubmit={handleBulkImport} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Cole os links ou nomes (1 por linha)
+                </label>
+                <textarea
+                  rows={6}
+                  required
+                  value={bulkText}
+                  onChange={(e) => setBulkText(e.target.value)}
+                  placeholder={`https://chat.whatsapp.com/Gj82938dhd92\nhttps://chat.whatsapp.com/Kp29482jd810\nGrupo Leads VIP 03\nGrupo Lançamento Alpha`}
+                  className="w-full bg-slate-50 border border-slate-200 font-mono text-xs rounded-xl p-3 text-slate-900 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Categoria destes grupos
+                </label>
+                <select
+                  value={bulkCategory}
+                  onChange={(e) => setBulkCategory(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="Lançamento">Lançamento</option>
+                  <option value="Vendas">Vendas</option>
+                  <option value="Afiliados">Afiliados</option>
+                  <option value="Networking">Networking</option>
+                  <option value="Suporte">Suporte</option>
+                </select>
+              </div>
+
+              {bulkSuccessMsg && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>{bulkSuccessMsg}</span>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkModal(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs py-2.5 rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  Importar Todos os Grupos
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
